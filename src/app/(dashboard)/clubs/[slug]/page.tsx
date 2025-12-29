@@ -227,6 +227,12 @@ export default async function ClubPage({ params }: ClubPageProps) {
           >
             View all {club._count.players} players →
           </Link>
+          <Link
+            href={`/clubs/${club.slug}/matches`}
+            className="text-sm text-muted-foreground hover:underline ml-4"
+          >
+            View all {club._count.matches} matches →
+          </Link>
         </div>
       </div>
     </div>
