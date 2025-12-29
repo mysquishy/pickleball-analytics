@@ -52,6 +52,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   memberships   Membership[]
+  player        Player?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 }
@@ -75,6 +76,7 @@ model Organization {
   subscription     Subscription?
   invites          Invite[]
   usage            Usage[]
+  clubs            Club[]
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
@@ -184,4 +186,179 @@ model FeatureFlag {
   environment       String   @default("development")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+// ============= PICKLEBALL MODELS =============
+
+// Club: Facility where pickleball is played
+model Club {
+  id             String      @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  slug           String      @unique
+  address        String?
+  city           String?
+  state          String?
+  zipCode        String?
+  phone          String?
+  email          String?
+  website        String?
+  description    String?
+  courts         Court[]
+  players        Player[]
+  matches        Match[]
+  leagues        League[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([organizationId])
+  @@index([slug])
+  @@map("clubs")
+}
+
+// Court: Playing surface at a club
+model Court {
+  id        String   @id @default(cuid())
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  clubId    String
+  name      String // e.g., "Court 1", "Center Court"
+  surface   String? // e.g., "Indoor Hard", "Outdoor Concrete"
+  lighting  Boolean  @default(true)
+  indoors   Boolean  @default(true)
+  matches   Match[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clubId])
+  @@map("courts")
+}
+
+// Player: Extended user profile with pickleball-specific info
+model Player {
+  id             String       @id @default(cuid())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String       @unique
+  club           Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  clubId         String
+  skillLevel     Float?       // 1.0-5.0 rating
+  skillLevelSelf Float?       // Self-reported skill level
+  dateOfBirth    DateTime?
+  phone          String?
+  emergencyContact String?
+  bio            String?      // Player bio/notes
+  isActive       Boolean      @default(true)
+  playerMatches  PlayerMatch[]
+  leagueMemberships LeagueMembership[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([clubId])
+  @@map("players")
+}
+
+// Match: Individual game record
+model Match {
+  id              String        @id @default(cuid())
+  club            Club          @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  clubId          String
+  court           Court?        @relation(fields: [courtId], references: [id], onDelete: SetNull)
+  courtId         String?
+  matchType       MatchType
+  scheduledFor    DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  playerMatches   PlayerMatch[]
+  league          League?       @relation(fields: [leagueId], references: [id], onDelete: SetNull)
+  leagueId        String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([clubId])
+  @@index([courtId])
+  @@index([leagueId])
+  @@index([scheduledFor])
+  @@map("matches")
+}
+
+// PlayerMatch: Join table for players in a match
+model PlayerMatch {
+  id          String   @id @default(cuid())
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  matchId     String
+  player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId    String
+  team        Team     // TEAM1 or TEAM2
+  position    Position? // FIRST or SECOND (for doubles)
+  isWinner    Boolean  @default(false)
+  score       Int?     // Points scored by this player's team
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@unique([matchId, playerId])
+  @@index([matchId])
+  @@index([playerId])
+  @@map("player_matches")
+}
+
+// League: Organized competition
+model League {
+  id              String            @id @default(cuid())
+  club            Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  clubId          String
+  name            String
+  description     String?
+  leagueType      MatchType         // SINGLES or DOUBLES league
+  status          LeagueStatus      @default(UPCOMING)
+  startDate       DateTime?
+  endDate         DateTime?
+  matches         Match[]
+  memberships     LeagueMembership[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([clubId])
+  @@index([status])
+  @@map("leagues")
+}
+
+// LeagueMembership: Players in a league
+model LeagueMembership {
+  id        String   @id @default(cuid())
+  league    League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  leagueId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId  String
+  joinedAt  DateTime @default(now())
+
+  @@unique([leagueId, playerId])
+  @@index([leagueId])
+  @@index([playerId])
+  @@map("league_memberships")
+}
+
+// ============= PICKLEBALL ENUMS =============
+
+enum MatchType {
+  SINGLES
+  DOUBLES
+}
+
+enum Team {
+  TEAM1
+  TEAM2
+}
+
+enum Position {
+  FIRST
+  SECOND
+}
+
+enum LeagueStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
