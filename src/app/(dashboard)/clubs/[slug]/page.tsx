@@ -203,7 +203,7 @@ export default async function ClubPage({ params }: ClubPageProps) {
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
           <Link href={`/clubs/${club.slug}/courts/new`}>
             <Button variant="outline" className="w-full">
               Add Court
@@ -212,6 +212,11 @@ export default async function ClubPage({ params }: ClubPageProps) {
           <Link href={`/clubs/${club.slug}/players/new`}>
             <Button variant="outline" className="w-full">
               Add Player
+            </Button>
+          </Link>
+          <Link href={`/clubs/${club.slug}/leagues/new`}>
+            <Button variant="outline" className="w-full">
+              Create League
             </Button>
           </Link>
           <Link href={`/clubs/${club.slug}/matches/new`}>
@@ -232,6 +237,12 @@ export default async function ClubPage({ params }: ClubPageProps) {
             className="text-sm text-muted-foreground hover:underline ml-4"
           >
             View all {club._count.matches} matches →
+          </Link>
+          <Link
+            href={`/clubs/${club.slug}/leaderboard`}
+            className="text-sm text-muted-foreground hover:underline ml-4"
+          >
+            View leaderboard →
           </Link>
         </div>
       </div>
