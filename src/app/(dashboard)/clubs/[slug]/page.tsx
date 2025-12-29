@@ -218,6 +218,16 @@ export default async function ClubPage({ params }: ClubPageProps) {
             <Button className="w-full">Log Match</Button>
           </Link>
         </div>
+
+        {/* Players Link */}
+        <div className="mt-4 text-center">
+          <Link
+            href={`/clubs/${club.slug}/players`}
+            className="text-sm text-muted-foreground hover:underline"
+          >
+            View all {club._count.players} players →
+          </Link>
+        </div>
       </div>
     </div>
   );
