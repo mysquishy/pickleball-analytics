@@ -1,0 +1,46 @@
+# Dependencies
+node_modules
+
+# Production builds
+.next
+out
+build
+dist
+
+# Database
+*.db
+*.db-journal
+prisma/migrations
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Cache
+.turbo
+.vercel
+*.log
+
+# Generated files
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

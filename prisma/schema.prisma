@@ -1,0 +1,187 @@
+// Prisma schema for multi-tenant SaaS
+// Supports both SQLite (dev) and PostgreSQL (prod)
+
+datasource db {
+  provider = "sqlite" // Change to "postgresql" for production
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model User {
+  id            String       @id @default(cuid())
+  name          String?
+  email         String       @unique
+  emailVerified DateTime?
+  image         String?
+  password      String? // For credentials login
+  role          UserRole     @default(USER)
+  accounts      Account[]
+  sessions      Session[]
+  memberships   Membership[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Multi-tenancy models
+model Organization {
+  id               String        @id @default(cuid())
+  name             String
+  slug             String        @unique
+  logo             String?
+  stripeCustomerId String?       @unique
+  members          Membership[]
+  subscription     Subscription?
+  invites          Invite[]
+  usage            Usage[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([slug])
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  role           MemberRole   @default(MEMBER)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model Invite {
+  id             String       @id @default(cuid())
+  email          String
+  role           MemberRole   @default(MEMBER)
+  token          String       @unique
+  expires        DateTime
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  createdAt      DateTime     @default(now())
+
+  @@unique([email, organizationId])
+  @@index([organizationId])
+  @@index([token])
+}
+
+// Billing models
+model Subscription {
+  id                     String             @id @default(cuid())
+  stripeSubscriptionId   String             @unique
+  stripePriceId          String
+  price                  Int // Price in cents
+  stripeCurrentPeriodEnd DateTime
+  status                 SubscriptionStatus
+  plan                   SubscriptionPlan
+  organization           Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId         String             @unique
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+// Enums
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  PAST_DUE
+  TRIALING
+  UNPAID
+}
+
+enum SubscriptionPlan {
+  FREE
+  HOBBY
+  PRO
+  ENTERPRISE
+}
+
+// Usage tracking for metered billing
+model Usage {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  metric         String // e.g., "api_calls", "storage_gb", "seats"
+  value          Int // Usage amount
+  timestamp      DateTime     @default(now())
+  metadata       String? // JSON string for additional data
+
+  @@index([organizationId, metric, timestamp])
+  @@index([timestamp])
+}
+
+// Feature flags for gradual rollouts and A/B testing
+model FeatureFlag {
+  id                String   @id @default(cuid())
+  key               String   @unique
+  name              String
+  description       String?
+  enabled           Boolean  @default(false)
+  rolloutPercentage Int      @default(0)
+  userSegment       String? // JSON array of user IDs
+  environment       String   @default("development")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
