@@ -23,18 +23,18 @@ const updateClubSchema = z.object({
   description: z.string().max(500).optional(),
 });
 
-// GET /api/clubs/[id]
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+// GET /api/clubs/[clubId]
+export async function GET(req: Request, { params }: { params: Promise<{ clubId: string }> }) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id } = await params;
+  const { clubId } = await params;
 
   try {
     const club = await prisma.club.findUnique({
-      where: { id },
+      where: { id: clubId },
       include: {
         organization: {
           select: {
@@ -70,14 +70,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-// PUT /api/clubs/[id]
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+// PUT /api/clubs/[clubId]
+export async function PUT(req: Request, { params }: { params: Promise<{ clubId: string }> }) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id } = await params;
+  const { clubId } = await params;
 
   try {
     const body = await req.json();
@@ -85,7 +85,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     // Get the club first to check organization
     const club = await prisma.club.findUnique({
-      where: { id },
+      where: { id: clubId },
     });
 
     if (!club) {
@@ -111,7 +111,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     // Update the club
     const updatedClub = await prisma.club.update({
-      where: { id },
+      where: { id: clubId },
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.slug !== undefined && { slug: data.slug }),
@@ -151,19 +151,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-// DELETE /api/clubs/[id]
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+// DELETE /api/clubs/[clubId]
+export async function DELETE(req: Request, { params }: { params: Promise<{ clubId: string }> }) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id } = await params;
+  const { clubId } = await params;
 
   try {
     // Get the club first to check organization
     const club = await prisma.club.findUnique({
-      where: { id },
+      where: { id: clubId },
     });
 
     if (!club) {
@@ -175,7 +175,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     // Delete the club (cascade will handle courts, players, matches, leagues)
     await prisma.club.delete({
-      where: { id },
+      where: { id: clubId },
     });
 
     return NextResponse.json({ success: true });
